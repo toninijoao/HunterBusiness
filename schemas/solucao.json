@@ -1,0 +1,86 @@
+{
+    "type": "object",
+    "properties": {
+        "recommended_product": {
+            "type": "string"
+        },
+        "product_reason": {
+            "type": "string"
+        },
+        "website_structure": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "string"
+                    },
+                    "purpose": {
+                        "type": "string"
+                    },
+                    "features": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "page",
+                    "purpose",
+                    "features"
+                ]
+            }
+        },
+        "core_features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "mvp": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "future_features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "saas_opportunity": {
+            "type": "string",
+            "enum": [
+                "none",
+                "low",
+                "medium",
+                "high"
+            ]
+        },
+        "suggested_stack": {
+            "type": "array",
+            "items": {
+                "type": "string",
+            }
+        },
+        "reasoning": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": [
+        "reccomended_product",
+        "product_reason",
+        "website_structure",
+        "core_features",
+        "mvp",
+        "future_features",
+        "saas_opportunity",
+        "suggested_stack",
+        "reasoning"
+    ]
+}
