@@ -1,0 +1,67 @@
+{
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "city": {
+            "type": "string"
+        },
+        "state": {
+            "type": "string"
+        },
+        "country": {
+            "type": "string"
+        },
+        "address": {
+            "type": ["string", "null"]
+        },
+        "phone": {
+            "type": ["string", "null"]
+        },
+        "instagram": {
+            "type": ["string", "null"]
+        },
+        "facebook": {
+            "type": ["string", "null"]
+        },
+        "google_maps": {
+            "type": ["string", "null"]
+        },
+        "website": {
+            "type": ["string", "null"]
+        },
+        "website_status": {
+            "type": "string",
+            "enum": [
+                "WEBSITE_NOT_FOUND",
+                "WEBSITE_FOUND",
+                "WEBSITE_UNCERTAIN"
+            ]
+        },
+        "website_confidence": {
+            "type": "number"
+        },
+        "sources": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": [
+        "name",
+        "city",
+        "state",
+        "country",
+        "address",
+        "phone",
+        "instagram",
+        "facebook",
+        "google_maps",
+        "website",
+        "website_status",
+        "website_confidence",
+        "sources"
+    ]
+}
