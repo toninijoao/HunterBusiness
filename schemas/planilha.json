@@ -1,0 +1,139 @@
+{
+    "type": "object",
+    "properties": {
+        "empresa":{
+            "type": "string"
+        },
+        "segmento": {
+            "type": ["string", "null"]
+        },
+        "nicho": {
+            "type": ["string", "null"]
+        },
+        "cidade": {
+            "type": ["string", "null"]
+        },
+        "estado": {
+            "type": ["string", "null"]
+        },
+        "endereco": {
+            "type": ["string", "null"]
+        },
+        "telefone": {
+            "type": ["string", "null"]
+        },
+        "instagram": {
+            "type": ["string", "null"]
+        },
+        "facebook": {
+            "type": ["string", "null"]
+        },
+        "google_maps": {
+            "type": ["string", "null"]
+        },
+        "site": {
+            "type": ["string", "null"]
+        },
+        "porte": {
+            "type": ["string", "null"]
+        },
+        "produtos_servicos": {
+            "type": ["array", "null"],
+            "items": {
+                    "type": "string"
+            }
+        },
+        "publico_alvo": {
+            "type": ["string", "null"]
+        },
+        "forma_contato": {
+            "type": ["string", "null"]
+        },
+        "processo_atendimento": {
+            "type": ["string", "null"]
+        },
+        "processo_venda_agendamento": {
+            "type": ["string", "null"]
+        },
+        "diferenciais": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "produto_recomendado": {
+            "type": ["string", "null"]
+        },
+        "estrutura_site": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "funcionalidades": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "mvp": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "funcionalidades_futuras": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "oportunidade_saas":{
+            "type": ["string", "null"]
+        },
+        "stack_sugerida": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "fontes": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "observacoes": {
+            "type": ["string", "null"]
+        }
+    },
+    "required": [
+        "empresa",
+        "segmento",
+        "nicho",
+        "cidade",
+        "estado",
+        "endereco",
+        "telefone",
+        "instagram",
+        "facebook",
+        "google_maps",
+        "site",
+        "porte",
+        "produtos_servicos",
+        "publico_alvo",
+        "forma_contato",
+        "processo_atendimento",
+        "processo_venda_agendamento",
+        "diferenciais",
+        "produto_recomendado",
+        "estrutura_site",
+        "funcionalidades",
+        "mvp",
+        "funcionalidades_futuras",
+        "oportunidade_saas",
+        "stack_sugerida",
+        "fontes",
+        "observacoes"
+    ]
+}
