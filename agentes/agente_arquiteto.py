@@ -1,42 +1,150 @@
 import json
 from pathlib import Path
+
+from dotenv import load_dotenv
 from google import genai
+from google.genai import types
+
+from tools.registro import tools, tool_functions
+
+
+load_dotenv()
 
 client = genai.Client()
+
 model = "gemini-2.5-flash-lite"
 
 base_dir = Path(__file__).resolve().parent.parent
 
+
 def carregar_prompt() -> str:
-    prompt_path = base_dir / "prompts" / "arquiteto.md"
+    caminho = base_dir / "prompts" / "perfil.md"
 
-    return prompt_path.read_text(encoding="utf-8")
+    return caminho.read_text(encoding="utf-8")
 
-def carregar_schema() -> dict:
-    schema_path = base_dir / "schemas" / "solucao.json"
 
-    with schema_path.open("r", encoding="utf-8") as file:
-        return json.load(file)
+def converter_tools() -> list:
+    ferramentas = []
 
-def executar_arquiteto(perfil: dict) -> dict:
+    for tool in tools:
+        ferramentas.append(
+            types.FunctionDeclaration(
+                name=tool["name"],
+                description=tool["description"],
+                parameters=tool["input_schema"]
+            )
+        )
+
+    return [
+        types.Tool(
+            function_declarations=ferramentas
+        )
+    ]
+
+
+def executar_tool(nome: str, argumentos: dict):
+    if nome not in tool_functions:
+        raise ValueError(
+            f"Ferramenta desconhecida: {nome}"
+        )
+
+    funcao = tool_functions[nome]
+
+    return funcao(**argumentos)
+
+
+def executar_filtro(empresa: dict) -> dict:
     system_prompt = carregar_prompt()
-    schema = carregar_schema()
 
-    response = client.messages.create(
-        model=model,
-        max_tokens=5000,
-        system=system_prompt,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Analise o seguinte perfil de empresa e desenvolva digital mais adequada.\n\n"
-                    f"{json.dumps(perfil, ensure_ascii=False, indent=2)}"
-                ),
-            }
-        ],
+    tarefa = f"""
+Construa o perfil de negócio da empresa abaixo.
+
+Empresa:
+{json.dumps(empresa, ensure_ascii=False, indent=2)}
+"""
+
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=tarefa)
+            ]
+        )
+    ]
+
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        tools=converter_tools()
     )
 
-    resposta_texto = response.content[0].text
+    while True:
 
-    return json.loads(resposta_texto)
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=config
+        )
+
+        model_content = response.candidates[0].content
+
+        contents.append(model_content)
+
+        function_calls = [
+            part.function_call
+            for part in model_content.parts
+            if part.function_call
+        ]
+
+        if not function_calls:
+            break
+
+        function_response_parts = []
+
+        for function_call in function_calls:
+
+            try:
+                resultado = executar_tool(
+                    function_call.name,
+                    dict(function_call.args)
+                )
+
+                function_response_parts.append(
+                    types.Part.from_function_response(
+                        name=function_call.name,
+                        response={
+                            "result": resultado
+                        },
+                        id=function_call.id
+                    )
+                )
+
+            except Exception as error:
+
+                function_response_parts.append(
+                    types.Part.from_function_response(
+                        name=function_call.name,
+                        response={
+                            "error": str(error)
+                        },
+                        id=function_call.id
+                    )
+                )
+
+        contents.append(
+            types.Content(
+                role="user",
+                parts=function_response_parts
+            )
+        )
+
+    return extrair_resultado(response)
+
+
+def extrair_resultado(response) -> dict:
+
+    if not response.text:
+        raise ValueError(
+            "O agente filtro não retornou um resultado textual."
+        )
+
+    return json.loads(response.text)

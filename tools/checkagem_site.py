@@ -263,7 +263,6 @@ def verificar_site(
         )
 
     if possiveis_sites:
-
         return {
             "status": "WEBSITE_FOUND",
             "website": possiveis_sites[0]["url"],
@@ -271,11 +270,19 @@ def verificar_site(
             "evidence": possiveis_sites[:5]
         }
 
+    if resultados_unicos:
+        return {
+            "status": "WEBSITE_UNCERTAIN",
+            "website": None,
+            "confidence": 0.50,
+            "evidence": resultados_unicos[:10]
+        }
+
     return {
-        "status": "WEBSITE_NOT_FOUND",
+        "status": "WEBSITE_UNCERTAIN",
         "website": None,
-        "confidence": 0.80,
-        "evidence": resultados_unicos[:10]
+        "confidence": 0.30,
+        "evidence": []
     }
 
 

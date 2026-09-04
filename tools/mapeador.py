@@ -88,7 +88,7 @@ def mapear_endereco(
             }
         )
 
-    return  {
+    return {
         "encontrado": len(resultados) > 0,
         "status": data.get("status"),
         "endereco_original": endereco_completo,

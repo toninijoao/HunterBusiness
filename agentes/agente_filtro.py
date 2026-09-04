@@ -1,24 +1,57 @@
-import json 
+import json
 from pathlib import Path
+
+from dotenv import load_dotenv
 from google import genai
+from google.genai import types
+
 from tools.registro import tools, tool_functions
 
+
+load_dotenv()
+
 client = genai.Client()
-model="gemini-2.5-flash-lite"
+
+model = "gemini-2.5-flash-lite"
+
 base_dir = Path(__file__).resolve().parent.parent
+
 
 def carregar_prompt() -> str:
     caminho = base_dir / "prompts" / "perfil.md"
 
     return caminho.read_text(encoding="utf-8")
 
+
+def converter_tools() -> list:
+    ferramentas = []
+
+    for tool in tools:
+        ferramentas.append(
+            types.FunctionDeclaration(
+                name=tool["name"],
+                description=tool["description"],
+                parameters=tool["input_schema"]
+            )
+        )
+
+    return [
+        types.Tool(
+            function_declarations=ferramentas
+        )
+    ]
+
+
 def executar_tool(nome: str, argumentos: dict):
     if nome not in tool_functions:
-        raise ValueError(f"Ferramenta desconhecida: {nome}")
+        raise ValueError(
+            f"Ferramenta desconhecida: {nome}"
+        )
 
     funcao = tool_functions[nome]
 
     return funcao(**argumentos)
+
 
 def executar_filtro(empresa: dict) -> dict:
     system_prompt = carregar_prompt()
@@ -30,98 +63,88 @@ Empresa:
 {json.dumps(empresa, ensure_ascii=False, indent=2)}
 """
 
-    messages = [
-        {
-            "role": "user",
-            "content": tarefa
-        }
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=tarefa)
+            ]
+        )
     ]
 
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        tools=converter_tools()
+    )
+
     while True:
+
         response = client.models.generate_content(
             model=model,
-            max_tokens=5000,
-            system=system_prompt,
-            tools=tools,
-            messages=messages
+            contents=contents,
+            config=config
         )
 
-        messages.append(
-            {
-                "role": "assistant",
-                "content": response.content
-            }
-        )
+        model_content = response.candidates[0].content
 
-        if response.stop_reason == "end_turn":
+        contents.append(model_content)
+
+        function_calls = [
+            part.function_call
+            for part in model_content.parts
+            if part.function_call
+        ]
+
+        if not function_calls:
             break
 
-        if response.stop_reason != "tool_use":
-            raise RuntimeError(
-                f"Execução interrompida: {response.stop_reason}"
-            )
+        function_response_parts = []
 
-        tool_results = []
-
-        for block in response.content:
-
-            if block.type != "tool_use":
-                continue
+        for function_call in function_calls:
 
             try:
-                result = executar_tool(
-                    block.name,
-                    block.input
+                resultado = executar_tool(
+                    function_call.name,
+                    dict(function_call.args)
                 )
 
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(
-                            result,
-                            ensure_ascii=False
-                        )
-                    }
+                function_response_parts.append(
+                    types.Part.from_function_response(
+                        name=function_call.name,
+                        response={
+                            "result": resultado
+                        },
+                        id=function_call.id
+                    )
                 )
 
             except Exception as error:
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(
-                            {
-                                "error": str(error)
-                            },
-                            ensure_ascii=False
-                        ),
-                        "is_error": True
-                    }
+
+                function_response_parts.append(
+                    types.Part.from_function_response(
+                        name=function_call.name,
+                        response={
+                            "error": str(error)
+                        },
+                        id=function_call.id
+                    )
                 )
 
-        if tool_results:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": tool_results
-                }
+        contents.append(
+            types.Content(
+                role="user",
+                parts=function_response_parts
             )
+        )
 
     return extrair_resultado(response)
 
-def extrair_resultado(response) -> dict:
-    textos = [
-        block.text
-        for block in response.content
-        if block.type == "text"
-    ]
 
-    if not textos:
+def extrair_resultado(response) -> dict:
+
+    if not response.text:
         raise ValueError(
             "O agente filtro não retornou um resultado textual."
         )
 
-    texto = "\n".join(textos)
-
-    return json.loads(texto)
+    return json.loads(response.text)
