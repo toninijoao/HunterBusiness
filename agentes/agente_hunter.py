@@ -31,7 +31,7 @@ def executar_hunter(tarefa: str) -> dict:
     ]
 
     while True:
-        response = client.messages.create(
+        response = client.models.gerenate_content(
             model=model,
             max_tokens=5000,
             system=system_prompt,

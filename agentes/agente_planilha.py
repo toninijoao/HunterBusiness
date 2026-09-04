@@ -27,7 +27,7 @@ SOLUÇÃO RECOMENDADA:
 {json.dumps(solucao, ensure_ascii=False, indent=2)}
 """
 
-    response = client.messages.create(
+    response = client.models.generate_content(
         model=model,
         max_tokens=5000,
         system=system_prompt,
