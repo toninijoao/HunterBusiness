@@ -8,7 +8,7 @@ def main():
     resultado = executar_pipeline(tarefa)
 
     print(
-        f"\nPipeline: concluído."
+        f"\nPipeline concluído."
         f"\nEmpresas encontradas: {resultado['quantidade_encontrada']}"
         f"\nEmpresas processadas: {resultado['quantidade_processada']}"
     )
