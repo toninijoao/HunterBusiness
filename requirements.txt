@@ -1,4 +1,4 @@
-anthropic
+google_genai
 requests
 python-dotenv
 supabase

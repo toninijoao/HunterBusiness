@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
-from anthropic import Anthropic
+from google import genai
 from tools.registro import tools, tool_functions
 
 
-client = Anthropic()
-model="claude-sonnet-4-6"
+client = genai.Client()
+model="gemini-2.5-flash-lite"
 base_dir = Path(__file__).resolve().parent.parent
 
 def carregar_prompt() -> str:
