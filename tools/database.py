@@ -1,23 +1,38 @@
 import os
+
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+
 load_dotenv()
+
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
+
 if not supabase_url:
-    raise ValueError("SUPABASE_URL não encontrada no arquivo .env")
+    raise ValueError(
+        "SUPABASE_URL não encontrada no arquivo .env"
+    )
 
 if not supabase_key:
-    raise ValueError("SUPABASE_KEY não encontrada no arquivo .env")
+    raise ValueError(
+        "SUPABASE_KEY não encontrada no arquivo .env"
+    )
+
 
 supabase: Client = create_client(
     supabase_url,
     supabase_key
 )
 
-def buscar_empresa(nome: str, cidade: str | None = None, telefone: str | None = None) -> dict:
+
+def buscar_empresa(
+    nome: str,
+    cidade: str | None = None,
+    telefone: str | None = None
+) -> dict:
+
     query = (
         supabase
         .table("companies")
@@ -32,6 +47,7 @@ def buscar_empresa(nome: str, cidade: str | None = None, telefone: str | None = 
         query = query.eq("phone", telefone)
 
     response = query.execute()
+
     empresas = response.data or []
 
     return {
@@ -40,7 +56,9 @@ def buscar_empresa(nome: str, cidade: str | None = None, telefone: str | None = 
         "empresas": empresas
     }
 
+
 def salvar_empresa(empresa: dict) -> dict:
+
     dados = {
         "name": empresa.get("nome"),
         "category": empresa.get("segmento"),
@@ -66,13 +84,20 @@ def salvar_empresa(empresa: dict) -> dict:
 
     return {
         "sucesso": True,
-        "empresa": response.data[0] if response.data else None
+        "empresa": (
+            response.data[0]
+            if response.data
+            else None
+        )
     }
+
 
 buscar_empresa_tool = {
     "name": "buscar_empresa",
     "description": (
-        "Consulta o banco de dados para verificar se uma empresa já foi registrada. Use antes de salvar uma nova empresa para evitar duplicatas."
+        "Consulta o banco de dados para verificar se uma empresa "
+        "já foi registrada. Use antes de salvar uma nova empresa "
+        "para evitar duplicatas."
     ),
     "input_schema": {
         "type": "object",
@@ -82,11 +107,11 @@ buscar_empresa_tool = {
                 "description": "Nome da empresa."
             },
             "cidade": {
-                "type": ["string", "null"],
+                "type": "string",
                 "description": "Cidade da empresa."
             },
             "telefone": {
-                "type": ["string", "null"],
+                "type": "string",
                 "description": "Telefone da empresa, caso disponível."
             }
         },
@@ -96,17 +121,66 @@ buscar_empresa_tool = {
     }
 }
 
+
 salvar_empresa_tool = {
     "name": "salvar_empresa",
     "description": (
-        "Salva uma empresa validada no banco de dados. Use somente depois de confirmar que a empresa é válida e não está duplicada."
+        "Salva uma empresa validada no banco de dados. "
+        "Use somente depois de confirmar que a empresa é válida "
+        "e não está duplicada."
     ),
     "input_schema": {
         "type": "object",
         "properties": {
             "empresa": {
                 "type": "object",
-                "description": ("Dados estruturados da empresa validada.")
+                "properties": {
+                    "nome": {
+                        "type": "string"
+                    },
+                    "segmento": {
+                        "type": "string"
+                    },
+                    "cidade": {
+                        "type": "string"
+                    },
+                    "estado": {
+                        "type": "string"
+                    },
+                    "pais": {
+                        "type": "string"
+                    },
+                    "endereco": {
+                        "type": "string"
+                    },
+                    "telefone": {
+                        "type": "string"
+                    },
+                    "instagram": {
+                        "type": "string"
+                    },
+                    "facebook": {
+                        "type": "string"
+                    },
+                    "google_maps": {
+                        "type": "string"
+                    },
+                    "site": {
+                        "type": "string"
+                    },
+                    "website_status": {
+                        "type": "string"
+                    },
+                    "website_confidence": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "nome",
+                    "cidade",
+                    "estado",
+                    "pais"
+                ]
             }
         },
         "required": [
@@ -115,7 +189,9 @@ salvar_empresa_tool = {
     }
 }
 
+
 if __name__ == "__main__":
+
     resultado = buscar_empresa(
         nome="Empresa Exemplo",
         cidade="Cornélio Procópio"
