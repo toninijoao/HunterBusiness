@@ -54,7 +54,18 @@ def executar_hunter(tarefa: str) -> dict:
         }
     ]
 
+    max_iteracoes = 15
+    iteracao = 0
+
     while True:
+
+        iteracao += 1
+
+        if iteracao > max_iteracoes:
+            raise RuntimeError(
+                "O Hunter atingiu o limite máximo de iterações "
+                "sem concluir a tarefa."
+            )
 
         response = chat(
             model=model,
@@ -72,11 +83,26 @@ def executar_hunter(tarefa: str) -> dict:
             nome_tool = tool_call.function.name
             argumentos = tool_call.function.arguments
 
+            print("\n========================================")
+            print("TOOL CHAMADA")
+            print("Nome:", nome_tool)
+            print("Argumentos:", argumentos)
+            print("========================================")
+
             try:
 
                 resultado = executar_tool(
                     nome_tool,
                     argumentos
+                )
+
+                print("\nRESULTADO DA TOOL:")
+                print(
+                    json.dumps(
+                        resultado,
+                        ensure_ascii=False,
+                        indent=2
+                    )
                 )
 
                 messages.append(
@@ -91,6 +117,9 @@ def executar_hunter(tarefa: str) -> dict:
                 )
 
             except Exception as error:
+
+                print("\nERRO NA TOOL:")
+                print(str(error))
 
                 messages.append(
                     {
@@ -118,13 +147,15 @@ def executar_hunter(tarefa: str) -> dict:
         {
             "role": "user",
             "content": (
-                "Agora finalize a tarefa. "
-                "Retorne exclusivamente o resultado final "
-                "compatível com o schema fornecido. "
-                "Não escreva explicações fora do JSON. "
+                "Finalize a tarefa agora. "
+                "Retorne exclusivamente um objeto JSON "
+                "compatível com o schema empresa.json. "
+                "Inclua somente empresas reais e efetivamente "
+                "validadas pelas ferramentas. "
+                "Não invente nenhum dado. "
                 "Empresas rejeitadas não devem aparecer. "
-                "O campo 'empresas' deve conter somente empresas "
-                "efetivamente validadas."
+                "Se nenhuma empresa válida tiver sido encontrada, "
+                "retorne {\"empresas\": []}."
             )
         }
     ]
@@ -148,24 +179,29 @@ def extrair_resultado(response) -> dict:
         )
 
     try:
+
         resultado = json.loads(conteudo)
 
     except json.JSONDecodeError as error:
+
         raise ValueError(
             f"O Hunter retornou um JSON inválido: {error}"
         )
 
     if not isinstance(resultado, dict):
+
         raise ValueError(
             "O resultado do Hunter deve ser um objeto JSON."
         )
 
     if "empresas" not in resultado:
+
         raise ValueError(
             "O resultado do Hunter não possui o campo 'empresas'."
         )
 
     if not isinstance(resultado["empresas"], list):
+
         raise ValueError(
             "O campo 'empresas' deve ser uma lista."
         )

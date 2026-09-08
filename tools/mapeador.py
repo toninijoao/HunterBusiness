@@ -1,14 +1,14 @@
-import os
 import requests
 
-from dotenv import load_dotenv
+from urllib.parse import urlencode
 
 
-load_dotenv()
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
-google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-url = "https://maps.googleapis.com/maps/api/geocode/json"
+USER_AGENT = (
+    "BusinessHunter/1.0 "
+    "(ferramenta de geocodificação)"
+)
 
 
 def mapear_endereco(
@@ -17,14 +17,9 @@ def mapear_endereco(
     estado: str | None = None
 ) -> dict:
 
-    if not google_maps_api_key:
-        raise ValueError(
-            "GOOGLE_MAPS_API_KEY não encontrada no arquivo .env"
-        )
-
     if not endereco.strip():
         raise ValueError(
-            "O endereço não pode estar vazio"
+            "O endereço não pode estar vazio."
         )
 
     partes = [endereco]
@@ -40,17 +35,24 @@ def mapear_endereco(
     endereco_completo = ", ".join(partes)
 
     params = {
-        "address": endereco_completo,
-        "key": google_maps_api_key,
-        "language": "pt-BR",
-        "region": "br"
+        "q": endereco_completo,
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 5,
+        "countrycodes": "br",
+        "accept-language": "pt-BR"
+    }
+
+    headers = {
+        "User-Agent": USER_AGENT
     }
 
     try:
         response = requests.get(
-            url,
+            NOMINATIM_URL,
             params=params,
-            timeout=15
+            headers=headers,
+            timeout=30
         )
 
         response.raise_for_status()
@@ -62,40 +64,78 @@ def mapear_endereco(
 
     except requests.exceptions.RequestException as error:
         raise RuntimeError(
-            f"Erro ao consultar o Google Geocoding: {error}"
+            f"Erro ao consultar o Nominatim: {error}"
         )
 
-    data = response.json()
+    try:
+        data = response.json()
 
-    if data.get("status") != "OK":
+    except ValueError:
+        raise RuntimeError(
+            "O Nominatim retornou uma resposta inválida."
+        )
+
+    if not data:
         return {
             "encontrado": False,
-            "status": data.get("status"),
+            "status": "NOT_FOUND",
             "endereco_original": endereco_completo,
             "resultados": []
         }
 
     resultados = []
 
-    for resultado in data.get("results", []):
-        geometry = resultado.get("geometry", {})
-        location = geometry.get("location", {})
+    for resultado in data:
+
+        address = resultado.get(
+            "address",
+            {}
+        )
 
         resultados.append(
             {
                 "endereco_formatado": resultado.get(
-                    "formatted_address"
+                    "display_name"
                 ),
-                "latitude": location.get("lat"),
-                "longitude": location.get("lng"),
-                "tipo": geometry.get("location_type"),
-                "place_id": resultado.get("place_id")
+                "latitude": (
+                    float(resultado["lat"])
+                    if resultado.get("lat")
+                    else None
+                ),
+                "longitude": (
+                    float(resultado["lon"])
+                    if resultado.get("lon")
+                    else None
+                ),
+                "tipo": resultado.get(
+                    "type"
+                ),
+                "place_id": resultado.get(
+                    "osm_id"
+                ),
+                "osm_type": resultado.get(
+                    "osm_type"
+                ),
+                "cidade": (
+                    address.get("city")
+                    or address.get("town")
+                    or address.get("village")
+                    or ""
+                ),
+                "estado": address.get(
+                    "state",
+                    ""
+                ),
+                "pais": address.get(
+                    "country",
+                    ""
+                )
             }
         )
 
     return {
         "encontrado": len(resultados) > 0,
-        "status": data.get("status"),
+        "status": "OK",
         "endereco_original": endereco_completo,
         "resultados": resultados
     }
@@ -104,10 +144,11 @@ def mapear_endereco(
 mapear_endereco_tool = {
     "name": "mapear_endereco",
     "description": (
-        "Localiza geograficamente um endereço e retorna o endereço "
-        "formatado, latitude, longitude e identificadores de localização. "
-        "Use para confirmar ou complementar informações geográficas "
-        "de uma empresa."
+        "Localiza geograficamente um endereço utilizando dados "
+        "públicos do OpenStreetMap. Retorna endereço formatado, "
+        "latitude, longitude, cidade, estado e identificadores "
+        "do OpenStreetMap. Use para confirmar ou complementar "
+        "informações geográficas de uma empresa."
     ),
     "input_schema": {
         "type": "object",
@@ -118,11 +159,11 @@ mapear_endereco_tool = {
             },
             "cidade": {
                 "type": "string",
-                "description": "Cidade da empresa."
+                "description": "Cidade da empresa, quando disponível."
             },
             "estado": {
                 "type": "string",
-                "description": "Estado da empresa."
+                "description": "Estado da empresa, quando disponível."
             }
         },
         "required": [
@@ -133,6 +174,7 @@ mapear_endereco_tool = {
 
 
 if __name__ == "__main__":
+
     resultado = mapear_endereco(
         endereco="Rua Exemplo, 100",
         cidade="Cornélio Procópio",
