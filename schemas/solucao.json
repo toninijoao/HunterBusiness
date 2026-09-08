@@ -62,7 +62,7 @@
         "suggested_stack": {
             "type": "array",
             "items": {
-                "type": "string",
+                "type": "string"
             }
         },
         "reasoning": {
@@ -73,7 +73,7 @@
         }
     },
     "required": [
-        "reccomended_product",
+        "recommended_product",
         "product_reason",
         "website_structure",
         "core_features",
