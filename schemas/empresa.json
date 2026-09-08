@@ -1,67 +1,78 @@
 {
     "type": "object",
     "properties": {
-        "name": {
-            "type": "string"
-        },
-        "city": {
-            "type": "string"
-        },
-        "state": {
-            "type": "string"
-        },
-        "country": {
-            "type": "string"
-        },
-        "address": {
-            "type": "string"
-        },
-        "phone": {
-            "type": "string"
-        },
-        "instagram": {
-            "type": "string"
-        },
-        "facebook": {
-            "type": "string"
-        },
-        "google_maps": {
-            "type": "string"
-        },
-        "website": {
-            "type": "string"
-        },
-        "website_status": {
-            "type": "string",
-            "enum": [
-                "WEBSITE_NOT_FOUND",
-                "WEBSITE_FOUND",
-                "WEBSITE_UNCERTAIN"
-            ]
-        },
-        "website_confidence": {
-            "type": "number"
-        },
-        "sources": {
+        "empresas": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "city": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "instagram": {
+                        "type": "string"
+                    },
+                    "facebook": {
+                        "type": "string"
+                    },
+                    "google_maps": {
+                        "type": "string"
+                    },
+                    "website": {
+                        "type": "string"
+                    },
+                    "website_status": {
+                        "type": "string",
+                        "enum": [
+                            "WEBSITE_NOT_FOUND",
+                            "WEBSITE_FOUND",
+                            "WEBSITE_UNCERTAIN"
+                        ]
+                    },
+                    "website_confidence": {
+                        "type": "number"
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "name",
+                    "city",
+                    "state",
+                    "country",
+                    "address",
+                    "phone",
+                    "instagram",
+                    "facebook",
+                    "google_maps",
+                    "website",
+                    "website_status",
+                    "website_confidence",
+                    "sources"
+                ]
             }
         }
     },
     "required": [
-        "name",
-        "city",
-        "state",
-        "country",
-        "address",
-        "phone",
-        "instagram",
-        "facebook",
-        "google_maps",
-        "website",
-        "website_status",
-        "website_confidence",
-        "sources"
+        "empresas"
     ]
 }
