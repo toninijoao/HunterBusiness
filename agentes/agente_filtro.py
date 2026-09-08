@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from ollama import chat
 
 from tools.pesquisa_web import pesquisar_web, pesquisar_web_tool
 from tools.mapeador import mapear_endereco, mapear_endereco_tool
@@ -11,9 +10,7 @@ from tools.mapeador import mapear_endereco, mapear_endereco_tool
 
 load_dotenv()
 
-client = genai.Client()
-
-model = "gemini-3.5-flash-lite"
+model = "qwen3:8b"
 
 base_dir = Path(__file__).resolve().parent.parent
 
@@ -31,23 +28,10 @@ def carregar_schema() -> dict:
         return json.load(arquivo)
 
 
-def converter_tools() -> list:
-    return [
-        types.Tool(
-            function_declarations=[
-                types.FunctionDeclaration(
-                    name=pesquisar_web_tool["name"],
-                    description=pesquisar_web_tool["description"],
-                    parameters=pesquisar_web_tool["input_schema"]
-                ),
-                types.FunctionDeclaration(
-                    name=mapear_endereco_tool["name"],
-                    description=mapear_endereco_tool["description"],
-                    parameters=mapear_endereco_tool["input_schema"]
-                )
-            ]
-        )
-    ]
+tools = [
+    pesquisar_web,
+    mapear_endereco
+]
 
 
 tool_functions = {
@@ -77,95 +61,80 @@ Empresa:
 {json.dumps(empresa, ensure_ascii=False, indent=2)}
 """
 
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=tarefa)
-            ]
-        )
+    messages = [
+        {
+            "role": "system",
+            "content": system_prompt
+        },
+        {
+            "role": "user",
+            "content": tarefa
+        }
     ]
-
-    config = types.GenerateContentConfig(
-        system_instruction=system_prompt,
-        tools=converter_tools(),
-        response_mime_type="application/json",
-        response_schema=schema
-    )
 
     while True:
 
-        response = client.models.generate_content(
+        response = chat(
             model=model,
-            contents=contents,
-            config=config
+            messages=messages,
+            tools=tools
         )
 
-        if not response.candidates:
-            raise RuntimeError(
-                "O Gemini não retornou nenhum candidato."
-            )
+        messages.append(response.message)
 
-        model_content = response.candidates[0].content
-
-        contents.append(model_content)
-
-        function_calls = [
-            part.function_call
-            for part in model_content.parts
-            if part.function_call
-        ]
-
-        if not function_calls:
+        if not response.message.tool_calls:
             break
 
-        function_response_parts = []
-
-        for function_call in function_calls:
+        for tool_call in response.message.tool_calls:
 
             try:
                 resultado = executar_tool(
-                    function_call.name,
-                    dict(function_call.args)
+                    tool_call.function.name,
+                    tool_call.function.arguments
                 )
 
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=function_call.name,
-                        response={
-                            "result": resultado
-                        },
-                        id=function_call.id
-                    )
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_name": tool_call.function.name,
+                        "content": json.dumps(
+                            resultado,
+                            ensure_ascii=False
+                        )
+                    }
                 )
 
             except Exception as error:
 
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=function_call.name,
-                        response={
-                            "error": str(error)
-                        },
-                        id=function_call.id
-                    )
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_name": tool_call.function.name,
+                        "content": json.dumps(
+                            {
+                                "error": str(error)
+                            },
+                            ensure_ascii=False
+                        )
+                    }
                 )
 
-        contents.append(
-            types.Content(
-                role="user",
-                parts=function_response_parts
-            )
-        )
-
-    return extrair_resultado(response)
+    return extrair_resultado(response, schema)
 
 
-def extrair_resultado(response) -> dict:
+def extrair_resultado(response, schema: dict) -> dict:
 
-    if not response.text:
+    conteudo = response.message.content
+
+    if not conteudo:
         raise ValueError(
             "O agente filtro não retornou nenhum resultado."
         )
 
-    return json.loads(response.text)
+    try:
+        return json.loads(conteudo)
+
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"O agente filtro retornou um JSON inválido: {error}"
+        )
