@@ -20,7 +20,15 @@ def carregar_prompt() -> str:
     return caminho.read_text(encoding="utf-8")
 
 
+def carregar_schema() -> dict:
+    caminho = base_dir / "schemas" / "empresa.json"
+
+    with caminho.open("r", encoding="utf-8") as arquivo:
+        return json.load(arquivo)
+
+
 def executar_tool(nome: str, argumentos: dict):
+
     if nome not in tool_functions:
         raise ValueError(
             f"Ferramenta desconhecida: {nome}"
@@ -97,7 +105,37 @@ def executar_hunter(tarefa: str) -> dict:
                     }
                 )
 
-    return extrair_resultado(response)
+    conteudo_final = response.message.content
+
+    if not conteudo_final:
+        raise ValueError(
+            "O Hunter não retornou nenhuma decisão final."
+        )
+
+    schema = carregar_schema()
+
+    mensagens_finais = messages + [
+        {
+            "role": "user",
+            "content": (
+                "Agora finalize a tarefa. "
+                "Retorne exclusivamente o resultado final "
+                "compatível com o schema fornecido. "
+                "Não escreva explicações fora do JSON. "
+                "Empresas rejeitadas não devem aparecer. "
+                "O campo 'empresas' deve conter somente empresas "
+                "efetivamente validadas."
+            )
+        }
+    ]
+
+    resposta_final = chat(
+        model=model,
+        messages=mensagens_finais,
+        format=schema
+    )
+
+    return extrair_resultado(resposta_final)
 
 
 def extrair_resultado(response) -> dict:
@@ -110,9 +148,26 @@ def extrair_resultado(response) -> dict:
         )
 
     try:
-        return json.loads(conteudo)
+        resultado = json.loads(conteudo)
 
     except json.JSONDecodeError as error:
         raise ValueError(
             f"O Hunter retornou um JSON inválido: {error}"
         )
+
+    if not isinstance(resultado, dict):
+        raise ValueError(
+            "O resultado do Hunter deve ser um objeto JSON."
+        )
+
+    if "empresas" not in resultado:
+        raise ValueError(
+            "O resultado do Hunter não possui o campo 'empresas'."
+        )
+
+    if not isinstance(resultado["empresas"], list):
+        raise ValueError(
+            "O campo 'empresas' deve ser uma lista."
+        )
+
+    return resultado
