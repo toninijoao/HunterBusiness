@@ -1,110 +1,110 @@
 {
     "type": "object",
     "properties": {
-        "empresa":{
+        "empresa": {
             "type": "string"
         },
         "segmento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "nicho": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "cidade": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "estado": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "endereco": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "telefone": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "instagram": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "facebook": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "google_maps": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "site": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "porte": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "produtos_servicos": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
-                    "type": "string"
+                "type": "string"
             }
         },
         "publico_alvo": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "forma_contato": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "processo_atendimento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "processo_venda_agendamento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "diferenciais": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "produto_recomendado": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "estrutura_site": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "funcionalidades": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "mvp": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "funcionalidades_futuras": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
-        "oportunidade_saas":{
-            "type": ["string", "null"]
+        "oportunidade_saas": {
+            "type": "string"
         },
         "stack_sugerida": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "fontes": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "observacoes": {
-            "type": ["string", "null"]
+            "type": "string"
         }
     },
     "required": [
