@@ -1,31 +1,36 @@
 import os
 import requests
+
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
 url = "https://places.googleapis.com/v1/places:searchText"
 
+
 def pesquisar_web(
-        query: str,
-        quantidade: int = 10
+    query: str,
+    quantidade: int = 10
 ) -> dict:
 
     if not google_maps_api_key:
         raise ValueError(
-            "google_maps_api_key não encontrada no arquivo .env"
+            "GOOGLE_MAPS_API_KEY não encontrada no arquivo .env"
         )
 
     if not query.strip():
         raise ValueError(
             "A consulta de pesquisa não pode estar vazia."
-    )
+        )
 
     quantidade = max(1, min(20, quantidade))
 
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-api-key": google_maps_api_key,
+        "X-Goog-Api-Key": google_maps_api_key,
         "X-Goog-FieldMask": (
             "places.id,"
             "places.displayName,"
@@ -70,6 +75,7 @@ def pesquisar_web(
     resultados = []
 
     for place in data.get("places", []):
+
         display_name = place.get("displayName", {})
 
         resultados.append(
@@ -91,12 +97,13 @@ def pesquisar_web(
         "resultados": resultados
     }
 
+
 pesquisar_web_tool = {
     "name": "pesquisar_web",
     "description": (
         "Pesquisa empresas no Google Places com base em uma consulta. "
-        "Use essa ferramenta para descobrir empresas por segmento. "
-        "Cidade ou região e obter informações públicas básicas sobre elas. "
+        "Use essa ferramenta para descobrir empresas por segmento, "
+        "cidade ou região e obter informações públicas básicas sobre elas."
     ),
     "input_schema": {
         "type": "object",
@@ -124,10 +131,12 @@ pesquisar_web_tool = {
     }
 }
 
+
 if __name__ == "__main__":
+
     resultado = pesquisar_web(
         "clínicas odontológicas em Cornélio Procópio PR",
-         quantidade=5
+        quantidade=5
     )
 
     for empresa in resultado["resultados"]:
