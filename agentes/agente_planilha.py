@@ -9,7 +9,7 @@ from google.genai import types
 load_dotenv()
 
 client = genai.Client()
-model = "gemini-2.5-flash-lite"
+model = "gemini-3.5-flash-lite"
 
 base_dir = Path(__file__).resolve().parent.parent
 

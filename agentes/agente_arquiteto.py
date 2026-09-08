@@ -2,15 +2,12 @@ import json
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from ollama import chat
 
 
 load_dotenv()
 
-client = genai.Client()
-
-model = "gemini-2.5-flash-lite"
+model = "qwen3:8b"
 
 base_dir = Path(__file__).resolve().parent.parent
 
@@ -41,14 +38,19 @@ PERFIL DO NEGÓCIO:
 {json.dumps(perfil, ensure_ascii=False, indent=2)}
 """
 
-    response = client.models.generate_content(
+    response = chat(
         model=model,
-        contents=tarefa,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=schema
-        )
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": tarefa
+            }
+        ],
+        format=schema
     )
 
     return extrair_resultado(response)
@@ -56,9 +58,9 @@ PERFIL DO NEGÓCIO:
 
 def extrair_resultado(response) -> dict:
 
-    if not response.text:
+    if not response.message.content:
         raise ValueError(
             "O agente arquiteto não retornou nenhum resultado."
         )
 
-    return json.loads(response.text)
+    return json.loads(response.message.content)

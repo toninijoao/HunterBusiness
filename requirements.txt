@@ -1,4 +1,4 @@
-google_genai
+ollama
 requests
 python-dotenv
 supabase
