@@ -1,15 +1,20 @@
-import os 
+import os
 import requests
+
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
 url = "https://maps.googleapis.com/maps/api/geocode/json"
 
+
 def mapear_endereco(
-        endereco: str,
-        cidade: str | None = None,
-        estado: str | None = None
+    endereco: str,
+    cidade: str | None = None,
+    estado: str | None = None
 ) -> dict:
 
     if not google_maps_api_key:
@@ -22,7 +27,7 @@ def mapear_endereco(
             "O endereço não pode estar vazio"
         )
 
-    partes=[endereco]
+    partes = [endereco]
 
     if cidade:
         partes.append(cidade)
@@ -74,7 +79,7 @@ def mapear_endereco(
 
     for resultado in data.get("results", []):
         geometry = resultado.get("geometry", {})
-        location = resultado.get("location", {})
+        location = geometry.get("location", {})
 
         resultados.append(
             {
@@ -95,11 +100,14 @@ def mapear_endereco(
         "resultados": resultados
     }
 
+
 mapear_endereco_tool = {
     "name": "mapear_endereco",
     "description": (
-        "Localiza geograficamente um endereço e retorna o endereço formatado, latitude, longitude e identificadores de localização."
-        "Use para confirmar ou complementar informações geográficas de uma empresa."
+        "Localiza geograficamente um endereço e retorna o endereço "
+        "formatado, latitude, longitude e identificadores de localização. "
+        "Use para confirmar ou complementar informações geográficas "
+        "de uma empresa."
     ),
     "input_schema": {
         "type": "object",
@@ -109,11 +117,11 @@ mapear_endereco_tool = {
                 "description": "Endereço da empresa."
             },
             "cidade": {
-                "type": ["string", "null"],
+                "type": "string",
                 "description": "Cidade da empresa."
             },
             "estado": {
-                "type": ["string", "null"],
+                "type": "string",
                 "description": "Estado da empresa."
             }
         },
@@ -122,6 +130,7 @@ mapear_endereco_tool = {
         ]
     }
 }
+
 
 if __name__ == "__main__":
     resultado = mapear_endereco(
