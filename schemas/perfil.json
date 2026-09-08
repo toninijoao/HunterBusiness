@@ -5,82 +5,82 @@
             "type": "string"
         },
         "segmento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "nicho": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "cidade": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "estado": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "endereco": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "telefone": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "instagram": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "facebook": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "google_maps": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "porte": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "produtos_servicos": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "publico_alvo": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "forma_contato": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "processo_atendimento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "processo_venda_agendamento": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "diferenciais": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "presenca_redes_sociais": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "informacoes_relevantes": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "fontes": {
-            "type": ["array", "null"],
+            "type": "array",
             "items": {
                 "type": "string"
             }
         },
         "observacoes": {
-            "type": ["string", "null"]
+            "type": "string"
         }
     },
     "required": [
