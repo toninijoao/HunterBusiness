@@ -52,7 +52,11 @@ def dominio_ignorado(url: str) -> bool:
     )
 
 
-def dominio_compativel(url: str, nome_empresa: str) -> bool:
+def dominio_compativel(
+    url: str,
+    nome_empresa: str
+) -> bool:
+
     dominio = extrair_dominio(url)
 
     nome_normalizado = normalizar_texto(nome_empresa)
@@ -66,7 +70,11 @@ def dominio_compativel(url: str, nome_empresa: str) -> bool:
     if not palavras:
         return False
 
-    dominio_limpo = re.sub(r"[^a-z0-9]", "", dominio)
+    dominio_limpo = re.sub(
+        r"[^a-z0-9]",
+        "",
+        dominio
+    )
 
     correspondencias = sum(
         1
@@ -74,7 +82,6 @@ def dominio_compativel(url: str, nome_empresa: str) -> bool:
         if palavra in dominio_limpo
     )
 
-    # Exige pelo menos uma correspondência relevante.
     return correspondencias >= 1
 
 
@@ -98,7 +105,9 @@ def verificar_conteudo_site(
 
         conteudo = resposta.text[:500000].lower()
 
-        nome_normalizado = normalizar_texto(nome_empresa)
+        nome_normalizado = normalizar_texto(
+            nome_empresa
+        )
 
         palavras = [
             palavra
@@ -119,7 +128,9 @@ def verificar_conteudo_site(
         )
 
         if titulo:
-            titulo_texto = normalizar_texto(titulo.group(1))
+            titulo_texto = normalizar_texto(
+                titulo.group(1)
+            )
 
             titulo_match = all(
                 palavra in titulo_texto
@@ -132,7 +143,9 @@ def verificar_conteudo_site(
             conteudo
         )
 
-        texto_limpo = normalizar_texto(texto_limpo)
+        texto_limpo = normalizar_texto(
+            texto_limpo
+        )
 
         texto_match = all(
             palavra in texto_limpo
@@ -156,13 +169,15 @@ def verificar_site(
             "O nome da empresa não pode estar vazio."
         )
 
-    # Caso o Google Places já tenha encontrado um site.
+    if not cidade.strip():
+        raise ValueError(
+            "A cidade da empresa não pode estar vazia."
+        )
+
     if site_encontrado:
 
-        if dominio_ignorado(site_encontrado):
-            site_encontrado = None
+        if not dominio_ignorado(site_encontrado):
 
-        else:
             if verificar_conteudo_site(
                 site_encontrado,
                 nome_empresa
@@ -231,7 +246,9 @@ def verificar_site(
 
         urls.add(url)
 
-        resultados_unicos.append(resultado)
+        resultados_unicos.append(
+            resultado
+        )
 
     possiveis_sites = []
 
@@ -263,6 +280,7 @@ def verificar_site(
         )
 
     if possiveis_sites:
+
         return {
             "status": "WEBSITE_FOUND",
             "website": possiveis_sites[0]["url"],
@@ -271,6 +289,7 @@ def verificar_site(
         }
 
     if resultados_unicos:
+
         return {
             "status": "WEBSITE_UNCERTAIN",
             "website": None,
@@ -291,7 +310,8 @@ verificar_site_tool = {
     "description": (
         "Verifica se uma empresa possui um site oficial funcional. "
         "Analisa sites encontrados no Google Places ou em pesquisas "
-        "na web e rejeita redes sociais, diretórios e outras plataformas externas."
+        "na web e rejeita redes sociais, diretórios e outras "
+        "plataformas externas."
     ),
     "input_schema": {
         "type": "object",
@@ -305,12 +325,10 @@ verificar_site_tool = {
                 "description": "Cidade da empresa."
             },
             "site_encontrado": {
-                "type": [
-                    "string",
-                    "null"
-                ],
+                "type": "string",
                 "description": (
-                    "Website fornecido pelo Google Places, caso exista."
+                    "Website fornecido pelo Google Places, "
+                    "caso exista."
                 )
             }
         },
