@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from tools.registro import tools, tool_functions
+from tools.pesquisa_web import pesquisar_web, pesquisar_web_tool
+from tools.mapeador import mapear_endereco, mapear_endereco_tool
 
 
 load_dotenv()
@@ -23,23 +24,36 @@ def carregar_prompt() -> str:
     return caminho.read_text(encoding="utf-8")
 
 
+def carregar_schema() -> dict:
+    caminho = base_dir / "schemas" / "perfil.json"
+
+    with caminho.open("r", encoding="utf-8") as arquivo:
+        return json.load(arquivo)
+
+
 def converter_tools() -> list:
-    ferramentas = []
-
-    for tool in tools:
-        ferramentas.append(
-            types.FunctionDeclaration(
-                name=tool["name"],
-                description=tool["description"],
-                parameters=tool["input_schema"]
-            )
-        )
-
     return [
         types.Tool(
-            function_declarations=ferramentas
+            function_declarations=[
+                types.FunctionDeclaration(
+                    name=pesquisar_web_tool["name"],
+                    description=pesquisar_web_tool["description"],
+                    parameters=pesquisar_web_tool["input_schema"]
+                ),
+                types.FunctionDeclaration(
+                    name=mapear_endereco_tool["name"],
+                    description=mapear_endereco_tool["description"],
+                    parameters=mapear_endereco_tool["input_schema"]
+                )
+            ]
         )
     ]
+
+
+tool_functions = {
+    "pesquisar_web": pesquisar_web,
+    "mapear_endereco": mapear_endereco
+}
 
 
 def executar_tool(nome: str, argumentos: dict):
@@ -48,13 +62,13 @@ def executar_tool(nome: str, argumentos: dict):
             f"Ferramenta desconhecida: {nome}"
         )
 
-    funcao = tool_functions[nome]
-
-    return funcao(**argumentos)
+    return tool_functions[nome](**argumentos)
 
 
 def executar_filtro(empresa: dict) -> dict:
+
     system_prompt = carregar_prompt()
+    schema = carregar_schema()
 
     tarefa = f"""
 Construa o perfil de negócio da empresa abaixo.
@@ -74,7 +88,9 @@ Empresa:
 
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
-        tools=converter_tools()
+        tools=converter_tools(),
+        response_mime_type="application/json",
+        response_schema=schema
     )
 
     while True:
@@ -84,6 +100,11 @@ Empresa:
             contents=contents,
             config=config
         )
+
+        if not response.candidates:
+            raise RuntimeError(
+                "O Gemini não retornou nenhum candidato."
+            )
 
         model_content = response.candidates[0].content
 
@@ -144,7 +165,7 @@ def extrair_resultado(response) -> dict:
 
     if not response.text:
         raise ValueError(
-            "O agente filtro não retornou um resultado textual."
+            "O agente filtro não retornou nenhum resultado."
         )
 
     return json.loads(response.text)

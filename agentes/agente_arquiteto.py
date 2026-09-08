@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from tools.registro import tools, tool_functions
-
 
 load_dotenv()
 
@@ -18,124 +16,40 @@ base_dir = Path(__file__).resolve().parent.parent
 
 
 def carregar_prompt() -> str:
-    caminho = base_dir / "prompts" / "perfil.md"
+    caminho = base_dir / "prompts" / "arquiteto.md"
 
     return caminho.read_text(encoding="utf-8")
 
 
-def converter_tools() -> list:
-    ferramentas = []
+def carregar_schema() -> dict:
+    caminho = base_dir / "schemas" / "solucao.json"
 
-    for tool in tools:
-        ferramentas.append(
-            types.FunctionDeclaration(
-                name=tool["name"],
-                description=tool["description"],
-                parameters=tool["input_schema"]
-            )
-        )
-
-    return [
-        types.Tool(
-            function_declarations=ferramentas
-        )
-    ]
+    with caminho.open("r", encoding="utf-8") as arquivo:
+        return json.load(arquivo)
 
 
-def executar_tool(nome: str, argumentos: dict):
-    if nome not in tool_functions:
-        raise ValueError(
-            f"Ferramenta desconhecida: {nome}"
-        )
+def executar_arquiteto(perfil: dict) -> dict:
 
-    funcao = tool_functions[nome]
-
-    return funcao(**argumentos)
-
-
-def executar_filtro(empresa: dict) -> dict:
     system_prompt = carregar_prompt()
+    schema = carregar_schema()
 
     tarefa = f"""
-Construa o perfil de negócio da empresa abaixo.
+Analise o perfil de negócio abaixo e determine a solução digital
+mais adequada para essa empresa.
 
-Empresa:
-{json.dumps(empresa, ensure_ascii=False, indent=2)}
+PERFIL DO NEGÓCIO:
+{json.dumps(perfil, ensure_ascii=False, indent=2)}
 """
 
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=tarefa)
-            ]
+    response = client.models.generate_content(
+        model=model,
+        contents=tarefa,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+            response_schema=schema
         )
-    ]
-
-    config = types.GenerateContentConfig(
-        system_instruction=system_prompt,
-        tools=converter_tools()
     )
-
-    while True:
-
-        response = client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config
-        )
-
-        model_content = response.candidates[0].content
-
-        contents.append(model_content)
-
-        function_calls = [
-            part.function_call
-            for part in model_content.parts
-            if part.function_call
-        ]
-
-        if not function_calls:
-            break
-
-        function_response_parts = []
-
-        for function_call in function_calls:
-
-            try:
-                resultado = executar_tool(
-                    function_call.name,
-                    dict(function_call.args)
-                )
-
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=function_call.name,
-                        response={
-                            "result": resultado
-                        },
-                        id=function_call.id
-                    )
-                )
-
-            except Exception as error:
-
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=function_call.name,
-                        response={
-                            "error": str(error)
-                        },
-                        id=function_call.id
-                    )
-                )
-
-        contents.append(
-            types.Content(
-                role="user",
-                parts=function_response_parts
-            )
-        )
 
     return extrair_resultado(response)
 
@@ -144,7 +58,7 @@ def extrair_resultado(response) -> dict:
 
     if not response.text:
         raise ValueError(
-            "O agente filtro não retornou um resultado textual."
+            "O agente arquiteto não retornou nenhum resultado."
         )
 
     return json.loads(response.text)
