@@ -14,22 +14,22 @@
             "type": "string"
         },
         "address": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "phone": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "instagram": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "facebook": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "google_maps": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "website": {
-            "type": ["string", "null"]
+            "type": "string"
         },
         "website_status": {
             "type": "string",
