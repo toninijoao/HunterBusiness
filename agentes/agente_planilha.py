@@ -2,14 +2,12 @@ import json
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from ollama import chat
 
 
 load_dotenv()
 
-client = genai.Client()
-model = "gemini-3.5-flash-lite"
+model = "qwen3:8b"
 
 base_dir = Path(__file__).resolve().parent.parent
 
@@ -49,14 +47,19 @@ SOLUÇÃO RECOMENDADA:
 {json.dumps(solucao, ensure_ascii=False, indent=2)}
 """
 
-    response = client.models.generate_content(
+    response = chat(
         model=model,
-        contents=tarefa,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            response_schema=schema
-        )
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": tarefa
+            }
+        ],
+        format=schema
     )
 
     return extrair_resultado(response)
@@ -64,9 +67,17 @@ SOLUÇÃO RECOMENDADA:
 
 def extrair_resultado(response) -> dict:
 
-    if not response.text:
+    conteudo = response.message.content
+
+    if not conteudo:
         raise ValueError(
             "O agente planilha não retornou nenhum resultado."
         )
 
-    return json.loads(response.text)
+    try:
+        return json.loads(conteudo)
+
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"O agente planilha retornou um JSON inválido: {error}"
+        )
