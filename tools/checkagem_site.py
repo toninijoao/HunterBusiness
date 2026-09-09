@@ -290,13 +290,21 @@ def verificar_site(
 
     if resultados_unicos:
 
+        # Houve resultados nas buscas, mas nenhum passou nos filtros
+        # de domínio ignorado / domínio compatível / conteúdo
+        # correspondente. Isso é evidência razoável de que não existe
+        # um site oficial funcional dessa empresa.
         return {
-            "status": "WEBSITE_UNCERTAIN",
+            "status": "WEBSITE_NOT_FOUND",
             "website": None,
-            "confidence": 0.50,
+            "confidence": 0.75,
             "evidence": resultados_unicos[:10]
         }
 
+    # Nenhum resultado em nenhuma das consultas realizadas.
+    # Evidência mais fraca (não sabemos se a busca falhou por
+    # falta de indexação ou porque a empresa realmente não tem site),
+    # então fica como incerto em vez de confirmar ausência.
     return {
         "status": "WEBSITE_UNCERTAIN",
         "website": None,

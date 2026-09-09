@@ -1,31 +1,68 @@
 import re
+import json
 import requests
-
-from urllib.parse import quote
 
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 USER_AGENT = (
     "BusinessHunter/1.0 "
-    "(projeto de descoberta de empresas)"
+    "(ferramenta de descoberta de empresas)"
 )
 
 
-def extrair_termos_consulta(query: str) -> tuple[str, str | None]:
-    """
-    Tenta extrair uma categoria e uma localização da consulta.
+MAPEAMENTO_CATEGORIAS = {
+    "restaurante": ['["amenity"="restaurant"]'],
+    "restaurantes": ['["amenity"="restaurant"]'],
 
-    Exemplos:
-        "clínicas odontológicas em Cornélio Procópio PR"
-        -> ("clínicas odontológicas", "Cornélio Procópio PR")
+    "café": ['["amenity"="cafe"]'],
+    "cafés": ['["amenity"="cafe"]'],
+    "cafe": ['["amenity"="cafe"]'],
 
-        "restaurantes em Londrina PR"
-        -> ("restaurantes", "Londrina PR")
+    "bar": ['["amenity"="bar"]'],
+    "bares": ['["amenity"="bar"]'],
 
-    Quando não consegue identificar uma localização,
-    mantém a consulta inteira como categoria.
-    """
+    "lanchonete": ['["amenity"="fast_food"]'],
+    "lanchonetes": ['["amenity"="fast_food"]'],
+
+    "farmácia": ['["amenity"="pharmacy"]'],
+    "farmácias": ['["amenity"="pharmacy"]'],
+
+    "hotel": ['["tourism"="hotel"]'],
+    "hotéis": ['["tourism"="hotel"]'],
+
+    "academia": ['["leisure"="fitness_centre"]'],
+    "academias": ['["leisure"="fitness_centre"]'],
+
+    "clínica": ['["amenity"="clinic"]'],
+    "clínicas": ['["amenity"="clinic"]'],
+
+    "dentista": ['["amenity"="dentist"]'],
+    "dentistas": ['["amenity"="dentist"]'],
+
+    "clínica odontológica": ['["amenity"="dentist"]'],
+    "clínicas odontológicas": ['["amenity"="dentist"]'],
+
+    "salão de beleza": ['["shop"="beauty"]'],
+    "salões de beleza": ['["shop"="beauty"]'],
+
+    "barbearia": ['["shop"="hairdresser"]'],
+    "barbearias": ['["shop"="hairdresser"]'],
+
+    "supermercado": ['["shop"="supermarket"]'],
+    "supermercados": ['["shop"="supermarket"]'],
+
+    "padaria": ['["shop"="bakery"]'],
+    "padarias": ['["shop"="bakery"]'],
+
+    "pet shop": ['["shop"="pet"]'],
+    "pet shops": ['["shop"="pet"]']
+}
+
+
+def extrair_termos_consulta(
+    query: str
+) -> tuple[str, str | None]:
 
     partes = re.split(
         r"\s+em\s+",
@@ -43,189 +80,131 @@ def extrair_termos_consulta(query: str) -> tuple[str, str | None]:
     return query.strip(), None
 
 
+def normalizar_localizacao(localizacao: str) -> str:
+    """
+    Remove informações estaduais adicionadas ao nome da cidade.
+
+    Exemplo:
+    "Cornélio Procópio PR"
+    -> "Cornélio Procópio"
+
+    "Cornélio Procópio Paraná"
+    -> "Cornélio Procópio"
+    """
+
+    resultado = localizacao.strip()
+
+    resultado = re.sub(
+        r"\s*-\s*(PR|Paraná)\s*$",
+        "",
+        resultado,
+        flags=re.IGNORECASE
+    )
+
+    resultado = re.sub(
+        r"\s+(PR|Paraná)\s*$",
+        "",
+        resultado,
+        flags=re.IGNORECASE
+    )
+
+    return resultado.strip()
+
+
 def normalizar_categoria(categoria: str) -> list[str]:
-    """
-    Converte termos comuns de negócio para categorias/tags
-    utilizadas pelo OpenStreetMap.
 
-    O resultado é uma lista de filtros possíveis.
-    """
+    categoria_normalizada = (
+        categoria
+        .strip()
+        .lower()
+    )
 
-    categoria_normalizada = categoria.lower().strip()
-
-    categorias = []
-
-    mapeamento = {
-        "restaurante": [
-            ('["amenity"="restaurant"]')
-        ],
-        "restaurantes": [
-            ('["amenity"="restaurant"]')
-        ],
-        "café": [
-            ('["amenity"="cafe"]')
-        ],
-        "cafés": [
-            ('["amenity"="cafe"]')
-        ],
-        "cafe": [
-            ('["amenity"="cafe"]')
-        ],
-        "lanchonete": [
-            ('["amenity"="fast_food"]')
-        ],
-        "lanchonetes": [
-            ('["amenity"="fast_food"]')
-        ],
-        "bar": [
-            ('["amenity"="bar"]')
-        ],
-        "bares": [
-            ('["amenity"="bar"]')
-        ],
-        "farmácia": [
-            ('["amenity"="pharmacy"]')
-        ],
-        "farmácias": [
-            ('["amenity"="pharmacy"]')
-        ],
-        "hotel": [
-            ('["tourism"="hotel"]')
-        ],
-        "hotéis": [
-            ('["tourism"="hotel"]')
-        ],
-        "academia": [
-            ('["leisure"="fitness_centre"]')
-        ],
-        "academias": [
-            ('["leisure"="fitness_centre"]')
-        ],
-        "clínica": [
-            ('["amenity"="clinic"]')
-        ],
-        "clínicas": [
-            ('["amenity"="clinic"]')
-        ],
-        "hospital": [
-            ('["amenity"="hospital"]')
-        ],
-        "hospitais": [
-            ('["amenity"="hospital"]')
-        ],
-        "dentista": [
-            ('["amenity"="dentist"]')
-        ],
-        "dentistas": [
-            ('["amenity"="dentist"]')
-        ],
-        "clínicas odontológicas": [
-            ('["amenity"="dentist"]')
-        ],
-        "salão de beleza": [
-            ('["shop"="beauty"]')
-        ],
-        "salões de beleza": [
-            ('["shop"="beauty"]')
-        ],
-        "barbearia": [
-            ('["shop"="hairdresser"]')
-        ],
-        "barbearias": [
-            ('["shop"="hairdresser"]')
-        ],
-        "supermercado": [
-            ('["shop"="supermarket"]')
-        ],
-        "supermercados": [
-            ('["shop"="supermarket"]')
-        ],
-        "padaria": [
-            ('["shop"="bakery"]')
-        ],
-        "padarias": [
-            ('["shop"="bakery"]')
-        ],
-        "pet shop": [
-            ('["shop"="pet"]')
-        ],
-        "pet shops": [
-            ('["shop"="pet"]')
+    if categoria_normalizada in MAPEAMENTO_CATEGORIAS:
+        return MAPEAMENTO_CATEGORIAS[
+            categoria_normalizada
         ]
-    }
-
-    if categoria_normalizada in mapeamento:
-        return mapeamento[categoria_normalizada]
 
     return [
-        f'[~"name|description|brand|operator"~"{re.escape(categoria)}", i]'
+        f'["name"~"{re.escape(categoria)}", i]'
     ]
 
 
 def construir_query_overpass(
     categoria: str,
-    localizacao: str | None,
-    quantidade: int
+    localizacao: str | None
 ) -> str:
 
-    filtros = normalizar_categoria(categoria)
+    filtros = normalizar_categoria(
+        categoria
+    )
 
     if localizacao:
-        area_nome = localizacao
 
-        consulta_filtros = []
+        localizacao = normalizar_localizacao(
+            localizacao
+        )
+
+        consultas = []
 
         for filtro in filtros:
-            consulta_filtros.append(
+
+            consultas.append(
                 f'nwr{filtro}(area.searchArea);'
             )
 
-        consulta_elementos = "\n".join(
-            consulta_filtros
+        consultas_elementos = "\n".join(
+            consultas
         )
 
         return f"""
 [out:json][timeout:30];
 
-area["name"="{area_nome}"]["boundary"="administrative"]->.searchArea;
+area["name"="{localizacao}"]["boundary"="administrative"]->.searchArea;
 
 (
-{consulta_elementos}
+{consultas_elementos}
 );
 
 out center tags;
 """.strip()
 
-    consulta_filtros = []
+    consultas = []
 
     for filtro in filtros:
-        consulta_filtros.append(
+
+        consultas.append(
             f'nwr{filtro}(-34.0,-74.0,6.0,-28.0);'
         )
 
-    consulta_elementos = "\n".join(
-        consulta_filtros
+    consultas_elementos = "\n".join(
+        consultas
     )
 
     return f"""
 [out:json][timeout:30];
 
 (
-{consulta_elementos}
+{consultas_elementos}
 );
 
 out center tags;
 """.strip()
 
 
-def obter_localizacao(elemento: dict) -> tuple[float | None, float | None]:
+def obter_localizacao(
+    elemento: dict
+) -> tuple[float | None, float | None]:
+
     latitude = elemento.get("lat")
     longitude = elemento.get("lon")
 
     if latitude is not None and longitude is not None:
         return latitude, longitude
 
-    center = elemento.get("center", {})
+    center = elemento.get(
+        "center",
+        {}
+    )
 
     return (
         center.get("lat"),
@@ -234,6 +213,7 @@ def obter_localizacao(elemento: dict) -> tuple[float | None, float | None]:
 
 
 def montar_endereco(tags: dict) -> str:
+
     partes = []
 
     rua = tags.get("addr:street")
@@ -278,15 +258,19 @@ def pesquisar_web(
         )
     )
 
-    categoria, localizacao = extrair_termos_consulta(
-        query
-    )
+    overpass_query = """
+        [out:json][timeout:30];
 
-    overpass_query = construir_query_overpass(
-        categoria=categoria,
-        localizacao=localizacao,
-        quantidade=quantidade
-    )
+        area["name"="Cornélio Procópio"]["boundary"="administrative"]["admin_level"="8"]->.searchArea;
+
+        (
+            nwr["healthcare"](area.searchArea);
+            nwr["amenity"="clinic"](area.searchArea);
+            nwr["office"="healthcare"](area.searchArea);
+        );
+
+        out center tags;
+"""
 
     headers = {
         "User-Agent": USER_AGENT,
@@ -294,7 +278,6 @@ def pesquisar_web(
     }
 
     try:
-
         response = requests.post(
             OVERPASS_URL,
             data={
@@ -313,132 +296,34 @@ def pesquisar_web(
         )
 
     except requests.exceptions.RequestException as error:
-
-        try:
-            detalhes = response.text
-        except Exception:
-            detalhes = ""
-
         raise RuntimeError(
-            "Erro ao consultar o Overpass API: "
-            f"{error}\n"
-            f"Resposta: {detalhes}"
+            f"Erro ao consultar o Overpass API: {error}\n"
+            f"Resposta: {response.text}"
         )
 
-    try:
-        data = response.json()
+    data = response.json()
 
-    except ValueError:
-        raise RuntimeError(
-            "O Overpass retornou uma resposta que "
-            "não pôde ser interpretada como JSON."
+    print("\nRESULTADO BRUTO DO OVERPASS:")
+    print(
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2
         )
+    )
 
     resultados = []
 
-    elementos = data.get(
-        "elements",
-        []
-    )
+    for elemento in data.get("elements", []):
 
-    elementos_vistos = set()
+        tags = elemento.get("tags", {})
 
-    for elemento in elementos:
-
-        tags = elemento.get(
-            "tags",
-            {}
-        )
-
-        nome = (
-            tags.get("name")
-            or tags.get("brand")
-            or tags.get("operator")
-        )
-
-        if not nome:
-            continue
-
-        elemento_id = (
-            elemento.get("type"),
-            elemento.get("id")
-        )
-
-        if elemento_id in elementos_vistos:
-            continue
-
-        elementos_vistos.add(
-            elemento_id
-        )
-
-        latitude, longitude = obter_localizacao(
-            elemento
-        )
-
-        endereco = montar_endereco(
-            tags
-        )
-
-        website = (
-            tags.get("website")
-            or tags.get("contact:website")
-            or ""
-        )
-
-        telefone = (
-            tags.get("phone")
-            or tags.get("contact:phone")
-            or ""
-        )
-
-        instagram = (
-            tags.get("contact:instagram")
-            or ""
-        )
-
-        facebook = (
-            tags.get("contact:facebook")
-            or ""
-        )
-
-        resultado = {
-            "place_id": (
-                f"osm:{elemento.get('type')}:"
-                f"{elemento.get('id')}"
-            ),
-            "nome": nome,
-            "endereco": endereco,
-            "telefone": telefone,
-            "google_maps": "",
-            "site": website,
-            "tipo_principal": (
-                tags.get("amenity")
-                or tags.get("shop")
-                or tags.get("tourism")
-                or tags.get("leisure")
-                or ""
-            ),
-            "tipos": [],
-            "cidade": (
-                tags.get("addr:city")
-                or localizacao
-                or ""
-            ),
-            "estado": (
-                tags.get("addr:state")
-                or ""
-            ),
-            "latitude": latitude,
-            "longitude": longitude,
-            "fonte": "OpenStreetMap"
-        }
-
-        resultados.append(
-            resultado
-        )
-
-        if len(resultados) >= quantidade:
-            break
+        resultados.append({
+            "nome": tags.get("name", ""),
+            "endereco": montar_endereco(tags),
+            "telefone": tags.get("phone", ""),
+            "site": tags.get("website", "")
+        })
 
     return {
         "consulta": query,
@@ -454,8 +339,8 @@ pesquisar_web_tool = {
         "dados públicos do OpenStreetMap através do Overpass API. "
         "Use essa ferramenta para descobrir empresas por "
         "segmento, cidade ou região. "
-        "Analise os resultados retornados antes de realizar "
-        "novas pesquisas."
+        "Os resultados retornados devem ser analisados antes "
+        "de realizar novas pesquisas."
     ),
     "input_schema": {
         "type": "object",
@@ -463,8 +348,8 @@ pesquisar_web_tool = {
             "query": {
                 "type": "string",
                 "description": (
-                    "Consulta de pesquisa contendo o segmento "
-                    "e, quando necessário, a cidade ou região. "
+                    "Consulta contendo o segmento e, quando "
+                    "necessário, a cidade ou região. "
                     "Exemplo: "
                     "'clínicas odontológicas em Cornélio Procópio PR'."
                 )
@@ -473,8 +358,7 @@ pesquisar_web_tool = {
                 "type": "integer",
                 "description": (
                     "Quantidade máxima de resultados desejados. "
-                    "Prefira valores entre 5 e 10 para gerar "
-                    "várias candidatas."
+                    "Prefira valores entre 5 e 10."
                 ),
                 "minimum": 1,
                 "maximum": 20,
@@ -505,4 +389,7 @@ if __name__ == "__main__":
     )
 
     for empresa in resultado["resultados"]:
-        print(empresa)
+
+        print(
+            empresa
+        )
