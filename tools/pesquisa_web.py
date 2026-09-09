@@ -1,9 +1,14 @@
 import re
 import json
+import time
 import requests
 
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
 
 USER_AGENT = (
     "BusinessHunter/1.0 "
@@ -270,28 +275,58 @@ def pesquisar_web(
         "Accept": "application/json"
     }
 
-    try:
-        response = requests.post(
-            OVERPASS_URL,
-            data={
-                "data": overpass_query
-            },
-            headers=headers,
-            timeout=60
-        )
+    response = None
+    ultimo_erro = None
 
-        response.raise_for_status()
+    for url in OVERPASS_URLS:
 
-    except requests.exceptions.Timeout:
+        for tentativa in range(2):
+
+            try:
+                response = requests.post(
+                    url,
+                    data={
+                        "data": overpass_query
+                    },
+                    headers=headers,
+                    timeout=60
+                )
+
+                response.raise_for_status()
+                ultimo_erro = None
+                break
+
+            except requests.exceptions.Timeout as error:
+                ultimo_erro = error
+                time.sleep(3)
+                continue
+
+            except requests.exceptions.HTTPError as error:
+                # 429 (rate limit) e 504 (servidor ocupado) valem
+                # tentar de novo ou trocar de espelho.
+                status = error.response.status_code if error.response else None
+
+                if status in (429, 502, 503, 504):
+                    ultimo_erro = error
+                    time.sleep(3)
+                    continue
+
+                raise RuntimeError(
+                    f"Erro ao consultar o Overpass API ({url}): {error}"
+                )
+
+            except requests.exceptions.RequestException as error:
+                ultimo_erro = error
+                time.sleep(3)
+                continue
+
+        if ultimo_erro is None:
+            break
+
+    if ultimo_erro is not None:
         raise RuntimeError(
-            "A pesquisa no OpenStreetMap/Overpass "
-            "excedeu o tempo limite."
-        )
-
-    except requests.exceptions.RequestException as error:
-        raise RuntimeError(
-            f"Erro ao consultar o Overpass API: {error}\n"
-            f"Resposta: {response.text}"
+            "Todos os espelhos do Overpass API falharam ou "
+            f"estão sobrecarregados. Último erro: {ultimo_erro}"
         )
 
     data = response.json()
@@ -335,7 +370,27 @@ pesquisar_web_tool = {
         "Use essa ferramenta para descobrir empresas por "
         "segmento, cidade ou região. "
         "Os resultados retornados devem ser analisados antes "
-        "de realizar novas pesquisas."
+        "de realizar novas pesquisas.\n\n"
+        "IMPORTANTE - FORMATO OBRIGATÓRIO DA QUERY:\n"
+        "Cada chamada deve conter exatamente UM segmento e, quando "
+        "aplicável, UMA localização, no formato "
+        "'<segmento> em <cidade>' ou '<segmento> em <cidade> <UF>'. "
+        "NÃO combine múltiplos segmentos na mesma consulta. "
+        "NÃO combine múltiplas cidades ou regiões na mesma consulta. "
+        "NÃO inclua texto extra como 'empresas de pequeno ou médio "
+        "porte' dentro da query - isso não é um segmento válido e "
+        "impede a busca de retornar resultados.\n\n"
+        "Exemplos CORRETOS:\n"
+        "- 'clínicas em Cornélio Procópio PR'\n"
+        "- 'barbearias em Cornélio Procópio'\n"
+        "- 'hotéis em Piraju SP'\n\n"
+        "Exemplos INCORRETOS (não use):\n"
+        "- 'empresas pequeno porte clínicas barbearias hotéis em "
+        "Cornélio Procópio e Piraju'\n"
+        "- 'clínicas e barbearias em Cornélio Procópio'\n\n"
+        "Para cobrir vários segmentos e várias localizações, faça "
+        "uma chamada separada para cada combinação de segmento e "
+        "localização."
     ),
     "input_schema": {
         "type": "object",
@@ -343,8 +398,9 @@ pesquisar_web_tool = {
             "query": {
                 "type": "string",
                 "description": (
-                    "Consulta contendo o segmento e, quando "
-                    "necessário, a cidade ou região. "
+                    "Consulta contendo APENAS UM segmento e, quando "
+                    "necessário, UMA cidade ou região, separados pela "
+                    "palavra ' em '. "
                     "Exemplo: "
                     "'clínicas odontológicas em Cornélio Procópio PR'."
                 )

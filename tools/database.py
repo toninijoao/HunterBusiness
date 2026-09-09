@@ -60,27 +60,49 @@ def buscar_empresa(
 def salvar_empresa(empresa: dict) -> dict:
 
     dados = {
-        "name": empresa.get("nome"),
-        "category": empresa.get("segmento"),
-        "city": empresa.get("cidade"),
-        "state": empresa.get("estado"),
-        "country": empresa.get("pais", "Brasil"),
-        "address": empresa.get("endereco"),
-        "phone": empresa.get("telefone"),
+        "name": empresa.get("name"),
+        "city": empresa.get("city"),
+        "state": empresa.get("state"),
+        "country": empresa.get("country", "Brasil"),
+        "address": empresa.get("address"),
+        "phone": empresa.get("phone"),
         "instagram": empresa.get("instagram"),
         "facebook": empresa.get("facebook"),
         "google_maps": empresa.get("google_maps"),
-        "website": empresa.get("site"),
+        "website": empresa.get("website"),
         "website_status": empresa.get("website_status"),
-        "website_confidence": empresa.get("website_confidence")
+        "website_confidence": empresa.get("website_confidence"),
+        "sources": empresa.get("sources")
     }
 
-    response = (
-        supabase
-        .table("companies")
-        .insert(dados)
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("companies")
+            .insert(dados)
+            .execute()
+        )
+
+    except Exception as error:
+
+        mensagem = str(error)
+
+        # A tabela "companies" real pode não ter a coluna "sources"
+        # criada ainda. Nesse caso, salva sem ela em vez de falhar
+        # a empresa inteira.
+        if "sources" in mensagem and "column" in mensagem.lower():
+
+            dados.pop("sources", None)
+
+            response = (
+                supabase
+                .table("companies")
+                .insert(dados)
+                .execute()
+            )
+
+        else:
+            raise
 
     return {
         "sucesso": True,
@@ -127,7 +149,10 @@ salvar_empresa_tool = {
     "description": (
         "Salva uma empresa validada no banco de dados. "
         "Use somente depois de confirmar que a empresa é válida "
-        "e não está duplicada."
+        "e não está duplicada. "
+        "Os campos de 'empresa' seguem exatamente o mesmo formato "
+        "do schema de resposta final (schemas/empresa.json): "
+        "chaves em inglês."
     ),
     "input_schema": {
         "type": "object",
@@ -135,25 +160,22 @@ salvar_empresa_tool = {
             "empresa": {
                 "type": "object",
                 "properties": {
-                    "nome": {
+                    "name": {
                         "type": "string"
                     },
-                    "segmento": {
+                    "city": {
                         "type": "string"
                     },
-                    "cidade": {
+                    "state": {
                         "type": "string"
                     },
-                    "estado": {
+                    "country": {
                         "type": "string"
                     },
-                    "pais": {
+                    "address": {
                         "type": "string"
                     },
-                    "endereco": {
-                        "type": "string"
-                    },
-                    "telefone": {
+                    "phone": {
                         "type": "string"
                     },
                     "instagram": {
@@ -165,7 +187,7 @@ salvar_empresa_tool = {
                     "google_maps": {
                         "type": "string"
                     },
-                    "site": {
+                    "website": {
                         "type": "string"
                     },
                     "website_status": {
@@ -173,13 +195,19 @@ salvar_empresa_tool = {
                     },
                     "website_confidence": {
                         "type": "number"
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "required": [
-                    "nome",
-                    "cidade",
-                    "estado",
-                    "pais"
+                    "name",
+                    "city",
+                    "state",
+                    "country"
                 ]
             }
         },

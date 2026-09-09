@@ -220,8 +220,7 @@ def verificar_site(
                         {
                             "consulta": consulta,
                             "titulo": resultado.get("title"),
-                            "url": resultado.get("href"),
-                            "descricao": resultado.get("body")
+                            "url": resultado.get("href")
                         }
                     )
 
@@ -274,8 +273,7 @@ def verificar_site(
         possiveis_sites.append(
             {
                 "url": url,
-                "titulo": resultado["titulo"],
-                "descricao": resultado["descricao"]
+                "titulo": resultado["titulo"]
             }
         )
 

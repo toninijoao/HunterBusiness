@@ -63,6 +63,15 @@ def criar_tarefa(config: dict) -> str:
     - Priorize empresas encontradas em Cornélio Procópio, e, depois, nas demais regiões prioritárias.
 
     Retorne somente empresas que atendam aos critérios.
+
+    ATENÇÃO - PRIMEIRO PASSO OBRIGATÓRIO:
+    Você ainda não pesquisou nada. É PROIBIDO responder com {{"empresas": []}}
+    ou qualquer resultado final antes de chamar a ferramenta pesquisar_web
+    pelo menos uma vez para cada segmento permitido em Cornélio Procópio.
+    "Não invento dados" significa usar as ferramentas para descobrir dados
+    reais - NÃO significa deixar de pesquisar e responder vazio.
+    Comece agora mesmo chamando pesquisar_web com UM segmento e UMA
+    localização, no formato '<segmento> em <cidade>'.
 """
 
 def executar_pipeline(tarefa: str) -> dict:

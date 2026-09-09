@@ -75,6 +75,13 @@ def executar_hunter(tarefa: str) -> dict:
 
         messages.append(response.message)
 
+        print("\n========================================")
+        print(f"ITERAÇÃO {iteracao}")
+        print("TOOL_CALLS:", response.message.tool_calls)
+        print("CONTENT (resposta do modelo):")
+        print(response.message.content)
+        print("========================================")
+
         if not response.message.tool_calls:
             break
 
