@@ -258,19 +258,12 @@ def pesquisar_web(
         )
     )
 
-    overpass_query = """
-        [out:json][timeout:30];
+    categoria, localizacao = extrair_termos_consulta(query)
 
-        area["name"="Cornélio Procópio"]["boundary"="administrative"]["admin_level"="8"]->.searchArea;
-
-        (
-            nwr["healthcare"](area.searchArea);
-            nwr["amenity"="clinic"](area.searchArea);
-            nwr["office"="healthcare"](area.searchArea);
-        );
-
-        out center tags;
-"""
+    overpass_query = construir_query_overpass(
+        categoria,
+        localizacao
+    )
 
     headers = {
         "User-Agent": USER_AGENT,
@@ -324,6 +317,8 @@ def pesquisar_web(
             "telefone": tags.get("phone", ""),
             "site": tags.get("website", "")
         })
+
+    resultados = resultados[:quantidade]
 
     return {
         "consulta": query,
