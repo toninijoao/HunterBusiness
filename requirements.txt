@@ -5,3 +5,5 @@ supabase
 pyyaml
 ddgs
 openpyxl
+fastapi
+uvicorn
