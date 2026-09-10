@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Business Hunter</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Business Hunter</h1>
+        <button id="botao-iniciar" type="button">Iniciar busca</button>
+      </header>
+
+      <p id="status" role="status"></p>
+
+      <table id="tabela-resultados">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cidade / UF</th>
+            <th>Telefone</th>
+            <th>Endereço</th>
+            <th>Site</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="corpo-tabela"></tbody>
+      </table>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
