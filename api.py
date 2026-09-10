@@ -9,6 +9,9 @@ from orquestrador.orquestrador import (
 
 app = FastAPI(title="Business Hunter API")
 
+# Libera acesso do frontend local (Vite roda em portas 5173/4173
+# por padrão). Como é uma ferramenta pessoal rodando na sua própria
+# máquina, liberar geral é suficiente e mais simples.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,7 +31,10 @@ def executar():
     try:
         config = carregar_config()
         tarefa = criar_tarefa(config)
-        resultado = executar_pipeline(tarefa)
+        resultado = executar_pipeline(
+            tarefa,
+            segmentos=config.get("segmentos")
+        )
 
     except Exception as error:
         raise HTTPException(

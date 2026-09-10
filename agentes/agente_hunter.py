@@ -1,4 +1,6 @@
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,6 +14,8 @@ load_dotenv()
 model = "qwen3:8b"
 
 base_dir = Path(__file__).resolve().parent.parent
+
+STOPWORDS_SEGMENTO = {"de", "do", "da", "e", "estilo", "empresas"}
 
 
 def carregar_prompt() -> str:
@@ -27,6 +31,29 @@ def carregar_schema() -> dict:
         return json.load(arquivo)
 
 
+def normalizar_texto(texto: str) -> str:
+
+    texto = unicodedata.normalize("NFKD", texto or "")
+    texto = texto.encode("ascii", "ignore").decode("ascii")
+
+    return texto.lower()
+
+
+def representante_segmento(segmento: str) -> str:
+    """
+    Reduz um segmento configurado (ex: 'estadias(estilo airbnb)',
+    'empresas de serviço') a uma palavra-chave representativa
+    ('estadias', 'servico'), pra dar pra checar se ele já foi
+    pesquisado, sem depender do texto exato que o modelo usar.
+    """
+
+    texto = normalizar_texto(segmento)
+    palavras = re.findall(r"[a-z0-9]+", texto)
+    palavras = [p for p in palavras if p not in STOPWORDS_SEGMENTO]
+
+    return palavras[0] if palavras else texto
+
+
 def executar_tool(nome: str, argumentos: dict):
 
     if nome not in tool_functions:
@@ -39,7 +66,7 @@ def executar_tool(nome: str, argumentos: dict):
     return funcao(**argumentos)
 
 
-def executar_hunter(tarefa: str) -> dict:
+def executar_hunter(tarefa: str, segmentos: list | None = None) -> dict:
 
     system_prompt = carregar_prompt()
 
@@ -54,8 +81,16 @@ def executar_hunter(tarefa: str) -> dict:
         }
     ]
 
-    max_iteracoes = 15
+    segmentos_pendentes = {
+        representante_segmento(segmento): segmento
+        for segmento in (segmentos or [])
+    }
+    segmentos_consultados = set()
+
+    max_iteracoes = 40
     iteracao = 0
+    avisos_continuar = 0
+    max_avisos_continuar = len(segmentos_pendentes) + 2
 
     while True:
 
@@ -82,64 +117,108 @@ def executar_hunter(tarefa: str) -> dict:
         print(response.message.content)
         print("========================================")
 
-        if not response.message.tool_calls:
-            break
+        if response.message.tool_calls:
 
-        for tool_call in response.message.tool_calls:
+            for tool_call in response.message.tool_calls:
 
-            nome_tool = tool_call.function.name
-            argumentos = tool_call.function.arguments
+                nome_tool = tool_call.function.name
+                argumentos = tool_call.function.arguments
 
-            print("\n========================================")
-            print("TOOL CHAMADA")
-            print("Nome:", nome_tool)
-            print("Argumentos:", argumentos)
-            print("========================================")
+                print("\n========================================")
+                print("TOOL CHAMADA")
+                print("Nome:", nome_tool)
+                print("Argumentos:", argumentos)
+                print("========================================")
 
-            try:
+                if nome_tool == "pesquisar_web":
 
-                resultado = executar_tool(
-                    nome_tool,
-                    argumentos
-                )
-
-                print("\nRESULTADO DA TOOL:")
-                print(
-                    json.dumps(
-                        resultado,
-                        ensure_ascii=False,
-                        indent=2
+                    consulta_normalizada = normalizar_texto(
+                        argumentos.get("query", "")
                     )
-                )
 
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_name": nome_tool,
-                        "content": json.dumps(
+                    for chave in list(segmentos_pendentes.keys()):
+                        if chave in consulta_normalizada:
+                            segmentos_consultados.add(chave)
+
+                try:
+
+                    resultado = executar_tool(
+                        nome_tool,
+                        argumentos
+                    )
+
+                    print("\nRESULTADO DA TOOL:")
+                    print(
+                        json.dumps(
                             resultado,
-                            ensure_ascii=False
+                            ensure_ascii=False,
+                            indent=2
                         )
-                    }
-                )
+                    )
 
-            except Exception as error:
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_name": nome_tool,
+                            "content": json.dumps(
+                                resultado,
+                                ensure_ascii=False
+                            )
+                        }
+                    )
 
-                print("\nERRO NA TOOL:")
-                print(str(error))
+                except Exception as error:
 
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_name": nome_tool,
-                        "content": json.dumps(
-                            {
-                                "error": str(error)
-                            },
-                            ensure_ascii=False
-                        )
-                    }
-                )
+                    print("\nERRO NA TOOL:")
+                    print(str(error))
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_name": nome_tool,
+                            "content": json.dumps(
+                                {
+                                    "error": str(error)
+                                },
+                                ensure_ascii=False
+                            )
+                        }
+                    )
+
+            continue
+
+        # O modelo respondeu sem chamar nenhuma ferramenta.
+        # Só aceita isso como "terminei" se já tiver ao menos
+        # tentado pesquisar todos os segmentos configurados.
+        faltando = {
+            chave: nome
+            for chave, nome in segmentos_pendentes.items()
+            if chave not in segmentos_consultados
+        }
+
+        if faltando and avisos_continuar < max_avisos_continuar:
+
+            avisos_continuar += 1
+
+            lista_faltando = ", ".join(faltando.values())
+
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "Você ainda não chamou pesquisar_web para os "
+                        f"seguintes segmentos: {lista_faltando}. "
+                        "Continue agora mesmo chamando pesquisar_web "
+                        "para o próximo desses segmentos em Cornélio "
+                        "Procópio, no formato '<segmento> em <cidade>'. "
+                        "Não finalize antes de tentar todos."
+                    )
+                }
+            )
+
+            continue
+
+        break
 
     conteudo_final = response.message.content
 

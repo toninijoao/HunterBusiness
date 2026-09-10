@@ -5,7 +5,10 @@ def main():
 
     tarefa = criar_tarefa(config)
 
-    resultado = executar_pipeline(tarefa)
+    resultado = executar_pipeline(
+        tarefa,
+        segmentos=config.get("segmentos")
+    )
 
     print(
         f"\nPipeline concluído."

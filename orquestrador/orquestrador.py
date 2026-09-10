@@ -74,8 +74,8 @@ def criar_tarefa(config: dict) -> str:
     localização, no formato '<segmento> em <cidade>'.
 """
 
-def executar_pipeline(tarefa: str) -> dict:
-    empresas = executar_hunter(tarefa)
+def executar_pipeline(tarefa: str, segmentos: list | None = None) -> dict:
+    empresas = executar_hunter(tarefa, segmentos=segmentos)
 
     if not isinstance(empresas, dict):
         raise ValueError(
